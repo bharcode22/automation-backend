@@ -2,9 +2,10 @@
   "name": "ssh-backend-service",
   "version": "1.0.0",
   "description": "Dedicated standalone Node.js backend for SSH remote operations, PTY terminal, SFTP, and live log streaming",
-  "main": "src/server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "build": "esbuild src/server.js --bundle --platform=node --target=node22 --packages=external --outfile=dist/server.js",
+    "start": "node dist/server.js",
     "dev": "node --watch src/server.js"
   },
   "keywords": [
@@ -25,5 +26,8 @@
     "multer": "^2.4.0",
     "socket.io": "^4.8.1",
     "ssh2": "^1.16.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

@@ -60,17 +60,36 @@ backend/
 
 ## ⚙️ Panduan Menjalankan
 
-### Jalankan Server:
-Mode development (auto-reload):
+### 1. Jalankan Menggunakan Docker (Rekomendasi):
 ```bash
+# Build dan jalankan di background (menggunakan port dari .env, default 5051)
+docker compose up -d --build
+
+# Melihat log aplikasi
+docker compose logs -f
+
+# Menghentikan kontainer
+docker compose down
+```
+
+### 2. Jalankan Langsung (Node.js):
+```bash
+# Install dependencies
+npm install
+
+# Mode Development (auto-reload dari src/):
 npm run dev
+
+# Mode Build & Production (bundle ke dist/):
+npm run build
+npm start
 ```
 
 Server aktif di:
-* **API Endpoint Info**: `http://localhost:5050`
-* **Health Check**: `http://localhost:5050/health`
-* **WebSocket Path**: `ws://localhost:5050` (`/socket.io/`)
-* **REST Base Route**: `http://localhost:5050/api/ssh/`
+* **API Endpoint Info**: `http://localhost:5051`
+* **Health Check**: `http://localhost:5051/health`
+* **WebSocket Path**: `ws://localhost:5051` (`/socket.io/`)
+* **REST Base Route**: `http://localhost:5051/api/ssh/`
 
 ---
 

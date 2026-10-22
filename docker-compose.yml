@@ -1,0 +1,11 @@
+services:
+  automation-backend:
+    build: .
+    container_name: automation-backend-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-5051}:${PORT:-5051}"
+    volumes:
+      - ./credential-ssh.json:/app/credential-ssh.json

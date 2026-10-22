@@ -3,7 +3,7 @@ const path = require('path');
 const os = require('os');
 
 // Path to credential-ssh.json in the backend root directory
-const CREDENTIALS_FILE_PATH = path.join(__dirname, '../../credential-ssh.json');
+const CREDENTIALS_FILE_PATH = process.env.CREDENTIALS_FILE_PATH || path.resolve(process.cwd(), 'credential-ssh.json');
 
 /**
  * Default fallback credentials
