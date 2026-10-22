@@ -1,0 +1,29 @@
+{
+  "name": "ssh-backend-service",
+  "version": "1.0.0",
+  "description": "Dedicated standalone Node.js backend for SSH remote operations, PTY terminal, SFTP, and live log streaming",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "ssh",
+    "ssh2",
+    "terminal",
+    "xterm",
+    "socket.io",
+    "sftp",
+    "pod-management"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^2.4.0",
+    "socket.io": "^4.8.1",
+    "ssh2": "^1.16.0"
+  }
+}

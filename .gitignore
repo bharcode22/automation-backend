@@ -1,0 +1,5 @@
+node_modules/
+credential-ssh.json
+.DS_Store
+*.log
+npm-debug.log*
