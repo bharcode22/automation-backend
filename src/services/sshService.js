@@ -133,7 +133,8 @@ function executeCommand(command, customConfig = {}, options = {}) {
     }
 
     conn.on('ready', () => {
-      conn.exec(fullCommand, (err, stream) => {
+      const execOpts = options.pty ? { pty: true } : {};
+      conn.exec(fullCommand, execOpts, (err, stream) => {
         if (err) {
           if (!isHandled) {
             isHandled = true;

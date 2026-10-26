@@ -58,7 +58,9 @@ app.get('/', (req, res) => {
       mediaList: 'GET /api/ssh/media/list',
       metadataGet: 'GET /api/ssh/metadata',
       metadataSave: 'POST /api/ssh/metadata',
-      metadataRestore: 'POST /api/ssh/metadata/restore'
+      metadataRestore: 'POST /api/ssh/metadata/restore',
+      scriptsRun: 'POST /api/ssh/scripts/run',
+      scriptsList: 'GET /api/ssh/scripts/list'
     },
     websocket: {
       path: '/socket.io/',

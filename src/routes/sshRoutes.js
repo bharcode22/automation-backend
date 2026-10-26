@@ -31,6 +31,11 @@ const {
   handleGenerateMetadataFromDb
 } = require('../controllers/metadataController');
 
+const {
+  handleRunScript,
+  handleListScripts
+} = require('../controllers/scriptController');
+
 // 1. Multi-SSH Configuration stored in credential-ssh.json
 router.get('/config', handleGetConfig);
 router.post('/config', handleSaveConfig);
@@ -50,6 +55,10 @@ router.post('/metadata', handleSaveMetadata);
 router.post('/metadata/restore', handleRestoreMetadata);
 router.post('/metadata/sync-db', handleSyncDb);
 router.post('/metadata/generate-from-db', handleGenerateMetadataFromDb);
+
+// 5. Remote Shell Scripts Execution (/home/pod/scripts/exec)
+router.post('/scripts/run', handleRunScript);
+router.get('/scripts/list', handleListScripts);
 
 module.exports = router;
 
