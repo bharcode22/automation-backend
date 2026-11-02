@@ -28,7 +28,8 @@ const {
   handleSaveMetadata,
   handleRestoreMetadata,
   handleSyncDb,
-  handleGenerateMetadataFromDb
+  handleGenerateMetadataFromDb,
+  handleMutateAndGenerateMetadata
 } = require('../controllers/metadataController');
 
 const {
@@ -49,17 +50,17 @@ router.post('/media/upload', upload.array('files', 50), handleUploadFiles);
 router.get('/media/list', handleListMedia);
 router.get('/media/detect', handleDetectCategory);
 
-// 4. Remote /home/pod/sounds/metadata.json Management
+// 4. Remote /home/pod/sounds/metadata.json & Database Management
 router.get('/metadata', handleGetMetadata);
 router.post('/metadata', handleSaveMetadata);
 router.post('/metadata/restore', handleRestoreMetadata);
 router.post('/metadata/sync-db', handleSyncDb);
 router.post('/metadata/generate-from-db', handleGenerateMetadataFromDb);
+router.post('/metadata/mutate-and-generate', handleMutateAndGenerateMetadata);
+router.post('/database/mutate-and-generate', handleMutateAndGenerateMetadata);
 
 // 5. Remote Shell Scripts Execution (/home/pod/scripts/exec)
 router.post('/scripts/run', handleRunScript);
 router.get('/scripts/list', handleListScripts);
 
 module.exports = router;
-
-

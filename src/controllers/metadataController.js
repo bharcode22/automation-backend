@@ -3,7 +3,9 @@ const {
   writeRemoteMetadata,
   restoreRemoteMetadata,
   triggerRemoteDatabaseSync,
-  generateMetadataFromDatabase
+  generateMetadataFromDatabase,
+  executeDatabaseMutation,
+  mutateDatabaseAndRegenerate
 } = require('../services/metadataService');
 const { loadSshCredentials, loadSshCredentialsList } = require('../config/sshConfig');
 
@@ -195,11 +197,112 @@ async function handleSyncDb(req, res) {
   }
 }
 
+/**
+ * POST /api/ssh/database/mutate-and-generate
+ * or POST /api/ssh/metadata/mutate-and-generate
+ * Execute SQL mutation (INSERT/UPDATE/DELETE) on remote PostgreSQL (regenesis) and regenerate metadata.json
+ */
+async function handleMutateAndGenerateMetadata(req, res) {
+  try {
+    const {
+      targetServerId,
+      sql,
+      queries,
+      broadcast = false,
+      createBackup = true,
+      regenerate = true
+    } = req.body || {};
+
+    const sqlToRun = sql || queries;
+    if (!sqlToRun || (Array.isArray(sqlToRun) && sqlToRun.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parameter "sql" atau "queries" wajib diisi (string SQL atau array query SQL).'
+      });
+    }
+
+    const isBroadcast = broadcast === true || broadcast === 'true';
+    let targetServers = [];
+
+    if (isBroadcast) {
+      targetServers = loadSshCredentialsList();
+    } else {
+      const target = loadSshCredentials(targetServerId);
+      targetServers = target ? [target] : [];
+    }
+
+    if (targetServers.length === 0) {
+      return res.status(400).json({ success: false, error: 'Tidak ada server POD target yang tersedia.' });
+    }
+
+    const shouldRegenerate = regenerate !== false && regenerate !== 'false';
+    const shouldBackup = createBackup !== false && createBackup !== 'false';
+
+    const results = [];
+    const errors = [];
+
+    for (const server of targetServers) {
+      const serverLabel = server.name || `${server.username}@${server.host}:${server.port}`;
+      try {
+        let r;
+        if (shouldRegenerate) {
+          r = await mutateDatabaseAndRegenerate(server, sqlToRun, {
+            writeToFile: true,
+            createBackup: shouldBackup,
+            notifyChannel: true
+          });
+          r.serverName = serverLabel;
+        } else {
+          const dbRes = await executeDatabaseMutation(server, sqlToRun);
+          r = {
+            success: true,
+            serverName: serverLabel,
+            targetHost: `${server.username}@${server.host}:${server.port}`,
+            dbMutation: {
+              success: true,
+              output: dbRes.stdout,
+              durationMs: dbRes.durationMs
+            }
+          };
+        }
+        results.push(r);
+      } catch (err) {
+        errors.push({
+          serverName: serverLabel,
+          host: `${server.username}@${server.host}:${server.port}`,
+          error: err.message
+        });
+      }
+    }
+
+    const totalGenerated = results.reduce((acc, curr) => acc + (curr.totalItems || 0), 0);
+
+    return res.json({
+      success: results.length > 0,
+      mutatedServersCount: results.length,
+      failedServersCount: errors.length,
+      regenerated: shouldRegenerate,
+      totalGeneratedItems: results[0]?.totalItems !== undefined ? results[0].totalItems : totalGenerated,
+      stats: results[0]?.stats || {},
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+      message: errors.length === 0
+        ? shouldRegenerate
+          ? `Berhasil memperbarui database dan men-generate metadata untuk ${results.length} server POD (${results[0]?.totalItems || 0} item).`
+          : `Berhasil mengeksekusi mutasi database pada ${results.length} server POD.`
+        : `Operasi selesai dengan ${results.length} berhasil dan ${errors.length} gagal.`
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
 module.exports = {
   handleGetMetadata,
   handleSaveMetadata,
   handleRestoreMetadata,
   handleSyncDb,
-  handleGenerateMetadataFromDb
+  handleGenerateMetadataFromDb,
+  handleMutateAndGenerateMetadata
 };
 

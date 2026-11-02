@@ -2,6 +2,7 @@ const { Client } = require('ssh2');
 const path = require('path');
 const stream = require('stream');
 const { resolveSshConfig } = require('../config/sshConfig');
+const { executeCommand } = require('./sshService');
 
 const REMOTE_SOUNDS_DIR = '/home/pod/sounds';
 const REMOTE_METADATA_FILE = '/home/pod/sounds/metadata.json';
@@ -28,7 +29,7 @@ function readRemoteMetadata(serverConfig) {
     const timeout = setTimeout(() => {
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Waktu habis saat membaca metadata dari ${sshConfig.host}`));
       }
     }, sshConfig.readyTimeout || 15000);
@@ -38,7 +39,7 @@ function readRemoteMetadata(serverConfig) {
       conn.sftp((err, sftp) => {
         if (err) {
           clearTimeout(timeout);
-          try { conn.end(); } catch (_) {}
+          try { conn.end(); } catch (_) { }
           if (!isHandled) {
             isHandled = true;
             return reject(new Error(`Gagal membuka SFTP: ${err.message}`));
@@ -53,7 +54,7 @@ function readRemoteMetadata(serverConfig) {
           sftp.stat(REMOTE_METADATA_FILE, (statErr, stat) => {
             if (statErr) {
               clearTimeout(timeout);
-              try { conn.end(); } catch (_) {}
+              try { conn.end(); } catch (_) { }
               if (!isHandled) {
                 isHandled = true;
                 // If file doesn't exist yet, return empty list instead of hard error
@@ -82,7 +83,7 @@ function readRemoteMetadata(serverConfig) {
 
             readStream.on('end', () => {
               clearTimeout(timeout);
-              try { conn.end(); } catch (_) {}
+              try { conn.end(); } catch (_) { }
               if (!isHandled) {
                 isHandled = true;
                 const rawString = Buffer.concat(chunks).toString('utf8');
@@ -113,7 +114,7 @@ function readRemoteMetadata(serverConfig) {
 
             readStream.on('error', (streamErr) => {
               clearTimeout(timeout);
-              try { conn.end(); } catch (_) {}
+              try { conn.end(); } catch (_) { }
               if (!isHandled) {
                 isHandled = true;
                 reject(new Error(`Gagal membaca stream metadata: ${streamErr.message}`));
@@ -128,7 +129,7 @@ function readRemoteMetadata(serverConfig) {
       clearTimeout(timeout);
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Koneksi SSH error (${sshConfig.host}): ${connErr.message}`));
       }
     });
@@ -183,7 +184,7 @@ function writeRemoteMetadata(serverConfig, content, createBackup = true) {
     const timeout = setTimeout(() => {
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Waktu habis saat menyimpan metadata ke ${sshConfig.host}`));
       }
     }, (sshConfig.readyTimeout || 15000) + 15000);
@@ -197,7 +198,7 @@ function writeRemoteMetadata(serverConfig, content, createBackup = true) {
       conn.exec(backupCmd, (execErr, channel) => {
         if (execErr) {
           clearTimeout(timeout);
-          try { conn.end(); } catch (_) {}
+          try { conn.end(); } catch (_) { }
           if (!isHandled) {
             isHandled = true;
             return reject(new Error(`Gagal menyiapkan backup: ${execErr.message}`));
@@ -213,7 +214,7 @@ function writeRemoteMetadata(serverConfig, content, createBackup = true) {
           conn.sftp((sftpErr, sftp) => {
             if (sftpErr) {
               clearTimeout(timeout);
-              try { conn.end(); } catch (_) {}
+              try { conn.end(); } catch (_) { }
               if (!isHandled) {
                 isHandled = true;
                 return reject(new Error(`Gagal membuka SFTP: ${sftpErr.message}`));
@@ -225,7 +226,7 @@ function writeRemoteMetadata(serverConfig, content, createBackup = true) {
 
             writeStream.on('close', () => {
               clearTimeout(timeout);
-              try { conn.end(); } catch (_) {}
+              try { conn.end(); } catch (_) { }
               if (!isHandled) {
                 isHandled = true;
                 resolve({
@@ -239,7 +240,7 @@ function writeRemoteMetadata(serverConfig, content, createBackup = true) {
 
             writeStream.on('error', (wErr) => {
               clearTimeout(timeout);
-              try { conn.end(); } catch (_) {}
+              try { conn.end(); } catch (_) { }
               if (!isHandled) {
                 isHandled = true;
                 reject(new Error(`Gagal menulis berkas metadata via SFTP: ${wErr.message}`));
@@ -258,7 +259,7 @@ function writeRemoteMetadata(serverConfig, content, createBackup = true) {
       clearTimeout(timeout);
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Koneksi SSH error (${sshConfig.host}): ${connErr.message}`));
       }
     });
@@ -296,7 +297,7 @@ function restoreRemoteMetadata(serverConfig) {
     const timeout = setTimeout(() => {
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Waktu habis saat memulihkan metadata di ${sshConfig.host}`));
       }
     }, sshConfig.readyTimeout || 15000);
@@ -307,7 +308,7 @@ function restoreRemoteMetadata(serverConfig) {
       conn.exec(restoreCmd, (execErr, channel) => {
         if (execErr) {
           clearTimeout(timeout);
-          try { conn.end(); } catch (_) {}
+          try { conn.end(); } catch (_) { }
           if (!isHandled) {
             isHandled = true;
             return reject(new Error(`Gagal mengeksekusi pemulihan: ${execErr.message}`));
@@ -320,7 +321,7 @@ function restoreRemoteMetadata(serverConfig) {
 
         channel.on('close', (code) => {
           clearTimeout(timeout);
-          try { conn.end(); } catch (_) {}
+          try { conn.end(); } catch (_) { }
           if (!isHandled) {
             isHandled = true;
             if (code === 2) {
@@ -343,7 +344,7 @@ function restoreRemoteMetadata(serverConfig) {
       clearTimeout(timeout);
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Koneksi SSH error (${sshConfig.host}): ${connErr.message}`));
       }
     });
@@ -381,7 +382,7 @@ function triggerRemoteDatabaseSync(serverConfig) {
     const timeout = setTimeout(() => {
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Timeout saat memicu sinkronisasi database di ${sshConfig.host}`));
       }
     }, sshConfig.readyTimeout || 15000);
@@ -391,7 +392,7 @@ function triggerRemoteDatabaseSync(serverConfig) {
       conn.exec(notifyCmd, (err, channel) => {
         if (err) {
           clearTimeout(timeout);
-          try { conn.end(); } catch (_) {}
+          try { conn.end(); } catch (_) { }
           if (!isHandled) {
             isHandled = true;
             return reject(err);
@@ -405,7 +406,7 @@ function triggerRemoteDatabaseSync(serverConfig) {
 
         channel.on('close', (code) => {
           clearTimeout(timeout);
-          try { conn.end(); } catch (_) {}
+          try { conn.end(); } catch (_) { }
           if (!isHandled) {
             isHandled = true;
             resolve({
@@ -423,7 +424,7 @@ function triggerRemoteDatabaseSync(serverConfig) {
       clearTimeout(timeout);
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Koneksi SSH error (${sshConfig.host}): ${connErr.message}`));
       }
     });
@@ -465,7 +466,7 @@ function generateMetadataFromDatabase(serverConfig, options = {}) {
     const timeout = setTimeout(() => {
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Timeout saat men-generate metadata dari database di ${sshConfig.host}`));
       }
     }, (sshConfig.readyTimeout || 15000) + 20000);
@@ -643,11 +644,11 @@ function generateMetadataFromDatabase(serverConfig, options = {}) {
         if (notifyChannel) {
           try {
             await new Promise(r => conn.exec(`docker exec postgres-db psql -U development -d regenesis -c "NOTIFY metadata_changed, 'generate_metadata_completed';"`, () => r()));
-          } catch (_) {}
+          } catch (_) { }
         }
 
         clearTimeout(timeout);
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
 
         if (!isHandled) {
           isHandled = true;
@@ -674,7 +675,7 @@ function generateMetadataFromDatabase(serverConfig, options = {}) {
         }
       } catch (procErr) {
         clearTimeout(timeout);
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         if (!isHandled) {
           isHandled = true;
           reject(procErr);
@@ -686,7 +687,7 @@ function generateMetadataFromDatabase(serverConfig, options = {}) {
       clearTimeout(timeout);
       if (!isHandled) {
         isHandled = true;
-        try { conn.end(); } catch (_) {}
+        try { conn.end(); } catch (_) { }
         reject(new Error(`Koneksi SSH error (${sshConfig.host}): ${connErr.message}`));
       }
     });
@@ -703,12 +704,79 @@ function generateMetadataFromDatabase(serverConfig, options = {}) {
   });
 }
 
+/**
+ * Execute SQL mutation (INSERT, UPDATE, DELETE) inside a transaction on remote PostgreSQL
+ *
+ * @param {Object} serverConfig - Server credentials
+ * @param {string|string[]} sqlQueries - SQL query string or array of SQL strings
+ * @returns {Promise<Object>}
+ */
+async function executeDatabaseMutation(serverConfig, sqlQueries) {
+  const queriesArray = Array.isArray(sqlQueries) ? sqlQueries : [sqlQueries];
+  const combinedSql = queriesArray
+    .map(q => (typeof q === 'string' ? q.trim() : ''))
+    .filter(Boolean)
+    .join(';\n');
+
+  if (!combinedSql) {
+    throw new Error('Query SQL tidak boleh kosong.');
+  }
+
+  // Wrap inside transaction with ON_ERROR_STOP=1 for atomic execution
+  const fullSql = `BEGIN;\n${combinedSql};\nCOMMIT;`;
+  const base64Sql = Buffer.from(fullSql, 'utf-8').toString('base64');
+
+  const cmd = `echo "${base64Sql}" | (base64 -d 2>/dev/null || base64 --decode) | docker exec -i postgres-db psql -U development -d regenesis -v ON_ERROR_STOP=1 2>&1`;
+
+  const result = await executeCommand(cmd, serverConfig, { timeoutMs: 30000 });
+  if (!result.success || result.code !== 0 || (result.stdout && result.stdout.includes('ERROR:'))) {
+    throw new Error(`Database error (code ${result.code}): ${result.stdout || result.stderr}`);
+  }
+
+  return {
+    success: true,
+    stdout: result.stdout,
+    durationMs: result.durationMs
+  };
+}
+
+/**
+ * Execute SQL mutation on remote PostgreSQL (regenesis) and then regenerate metadata.json
+ *
+ * @param {Object} serverConfig - Server credentials
+ * @param {string|string[]} sqlQueries - SQL query string or array of SQL strings
+ * @param {Object} [options={}] - Options for metadata generation
+ * @returns {Promise<Object>}
+ */
+async function mutateDatabaseAndRegenerate(serverConfig, sqlQueries, options = {}) {
+  // 1. Run database mutation
+  const dbResult = await executeDatabaseMutation(serverConfig, sqlQueries);
+
+  // 2. Regenerate metadata from database
+  const metadataResult = await generateMetadataFromDatabase(serverConfig, {
+    writeToFile: options.writeToFile !== false,
+    createBackup: options.createBackup !== false,
+    notifyChannel: options.notifyChannel !== false
+  });
+
+  return {
+    ...metadataResult,
+    dbMutation: {
+      success: true,
+      output: dbResult.stdout,
+      durationMs: dbResult.durationMs
+    }
+  };
+}
+
 module.exports = {
   readRemoteMetadata,
   writeRemoteMetadata,
   restoreRemoteMetadata,
   triggerRemoteDatabaseSync,
   generateMetadataFromDatabase,
+  executeDatabaseMutation,
+  mutateDatabaseAndRegenerate,
   REMOTE_METADATA_FILE,
   REMOTE_METADATA_BACKUP
 };
