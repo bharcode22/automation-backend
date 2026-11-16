@@ -1,0 +1,24 @@
+{
+  "name": "automation-environment",
+  "variables": [
+    {
+      "name": "local_url",
+      "value": "http://localhost:5051",
+      "type": "text",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "40",
+      "value": "http://192.168.199.40:5051",
+      "type": "text",
+      "enabled": true,
+      "secret": false
+    }
+  ],
+  "info": {
+    "type": "bruno-environment",
+    "exportedAt": "2026-11-16T03:14:42.735Z",
+    "exportedUsing": "Bruno/v4.3.0"
+  }
+}

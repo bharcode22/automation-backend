@@ -769,6 +769,375 @@ async function mutateDatabaseAndRegenerate(serverConfig, sqlQueries, options = {
   };
 }
 
+/**
+ * Test PostgreSQL connection on remote POD, retrieve database info and inspect table schemas
+ *
+ * @param {Object} serverConfig - Server credentials
+ * @returns {Promise<Object>}
+ */
+async function testDatabaseConnection(serverConfig) {
+  const fullSql = `
+    SELECT json_build_object(
+      'info', (
+        SELECT json_build_object(
+          'database', current_database(),
+          'user', current_user,
+          'version', version(),
+          'now', now()
+        )
+      ),
+      'tables', (
+        SELECT coalesce(json_agg(json_build_object(
+          'table_name', table_name,
+          'column_name', column_name,
+          'data_type', data_type,
+          'is_nullable', is_nullable
+        )), '[]'::json)
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name IN ('experiences', 'detail_experience', 'burst_time', 'sound_task', 'self_development', 'self_development_sound')
+      ),
+      'samples', (
+        SELECT json_build_object(
+          'experiences', (SELECT coalesce(json_agg(t), '[]'::json) FROM (SELECT * FROM experiences WHERE deleted_at IS NULL LIMIT 2) t),
+          'detail_experience', (SELECT coalesce(json_agg(t), '[]'::json) FROM (SELECT * FROM detail_experience WHERE deleted_at IS NULL LIMIT 2) t),
+          'sound_task', (SELECT coalesce(json_agg(t), '[]'::json) FROM (SELECT * FROM sound_task WHERE deleted_at IS NULL LIMIT 2) t),
+          'self_development_sound', (SELECT coalesce(json_agg(t), '[]'::json) FROM (SELECT * FROM self_development_sound WHERE deleted_at IS NULL LIMIT 2) t)
+        )
+      )
+    );
+  `.trim();
+
+  const base64Sql = Buffer.from(fullSql, 'utf-8').toString('base64');
+  const cmd = `echo "${base64Sql}" | (base64 -d 2>/dev/null || base64 --decode) | docker exec -i postgres-db psql -U development -d regenesis -t -A 2>&1`;
+
+  const result = await executeCommand(cmd, serverConfig, { timeoutMs: 15000 });
+  if (!result.success || result.code !== 0 || (result.stdout && result.stdout.includes('ERROR:'))) {
+    throw new Error(`Koneksi database gagal (code ${result.code}): ${result.stdout || result.stderr}`);
+  }
+
+  let data = {};
+  try {
+    data = JSON.parse(result.stdout.trim());
+  } catch (parseErr) {
+    data = { rawOutput: result.stdout.trim() };
+  }
+
+  return {
+    success: true,
+    serverName: serverConfig.name,
+    targetHost: `${serverConfig.username}@${serverConfig.host}:${serverConfig.port}`,
+    durationMs: result.durationMs,
+    ...data
+  };
+}
+
+/**
+ * Read data directly from PostgreSQL on remote POD (read-only query)
+ * Returns both transformed metadata structure and raw relational table records
+ *
+ * @param {Object} serverConfig - Server credentials
+ * @param {Object} [options={}] - Options (category, includeRaw)
+ * @returns {Promise<Object>}
+ */
+function getDatabaseMetadata(serverConfig, options = {}) {
+  const { category = 'all', includeRaw = true } = options;
+
+  return new Promise((resolve, reject) => {
+    let sshConfig;
+    try {
+      sshConfig = resolveSshConfig(serverConfig);
+    } catch (err) {
+      return reject(new Error(`Konfigurasi SSH tidak valid: ${err.message}`));
+    }
+
+    const conn = new Client();
+    let isHandled = false;
+
+    const timeout = setTimeout(() => {
+      if (!isHandled) {
+        isHandled = true;
+        try { conn.end(); } catch (_) { }
+        reject(new Error(`Timeout saat mengambil data database di ${sshConfig.host}`));
+      }
+    }, (sshConfig.readyTimeout || 15000) + 15000);
+
+    conn.on('ready', async () => {
+      function execSql(sql) {
+        return new Promise((res, rej) => {
+          const oneLineSql = sql.replace(/\s+/g, ' ').trim();
+          conn.exec(`docker exec postgres-db psql -U development -d regenesis -t -A -c "${oneLineSql}"`, (err, stream) => {
+            if (err) return rej(err);
+            let out = '';
+            let errOut = '';
+            stream.on('data', d => out += d);
+            if (stream.stderr) stream.stderr.on('data', d => errOut += d);
+            stream.on('close', code => {
+              if (code !== 0) {
+                return rej(new Error(`SQL error (code ${code}): ${errOut || out}`));
+              }
+              try {
+                const parsed = JSON.parse(out.trim());
+                res(parsed);
+              } catch (parseErr) {
+                rej(new Error(`Gagal mem-parse JSON hasil database: ${parseErr.message}. Output: ${out.slice(0, 200)}`));
+              }
+            });
+          });
+        });
+      }
+
+      try {
+        const sqlExperiences = `
+          SELECT coalesce(json_agg(json_build_object(
+            'id', e.id,
+            'menu_name', e.menu_name,
+            'information', e.information,
+            'detail_experience', (
+              SELECT coalesce(json_agg(json_build_object(
+                'id', d.id,
+                'sound_scape', d.sound_scape,
+                'caption', d.caption,
+                'duration', d.duration,
+                'song', d.song,
+                'lamp', d.lamp,
+                'scent', d.scent,
+                'burst_time', (
+                  SELECT coalesce(json_agg(json_build_object('id', b.id, 'start_time', b.start_time, 'duration', b.duration)), '[]'::json)
+                  FROM burst_time b WHERE b.fk_detail_experience = d.id AND b.deleted_at IS NULL
+                )
+              )), '[]'::json)
+              FROM detail_experience d WHERE d.experience_id = e.id AND d.deleted_at IS NULL
+            )
+          )), '[]'::json)
+          FROM experiences e WHERE e.deleted_at IS NULL;
+        `;
+
+        const sqlSoundTasks = `
+          SELECT coalesce(json_agg(json_build_object(
+            'id', id,
+            'sound_task_code', sound_task_code,
+            'sound_little', sound_little,
+            'sound_less', sound_less,
+            'sound_advance', sound_advance,
+            'duration_little', duration_little,
+            'duration_less', duration_less,
+            'duration_advance', duration_advance
+          )), '[]'::json)
+          FROM sound_task WHERE deleted_at IS NULL;
+        `;
+
+        const sqlSelfDev = `
+          SELECT coalesce(json_agg(json_build_object(
+            'id', s.id,
+            'sound_code', s.sound_code,
+            'description', s.description,
+            'title', s.title,
+            'duration', s.duration,
+            'filepath', s.filepath,
+            'video', s.video,
+            'lamp', s.lamp,
+            'self_development', (
+              SELECT json_build_object(
+                'id', sd.id,
+                'self_development_name', sd.self_development_name,
+                'description', sd.description
+              )
+              FROM self_development sd WHERE sd.id = s.self_development_id
+            )
+          )), '[]'::json)
+          FROM self_development_sound s WHERE s.deleted_at IS NULL;
+        `;
+
+        const [experiences, soundTasks, sounds] = await Promise.all([
+          execSql(sqlExperiences),
+          execSql(sqlSoundTasks),
+          execSql(sqlSelfDev)
+        ]);
+
+        // Transform Domain 1: Sessions
+        const formattedResult = (experiences || []).flatMap((exp) =>
+          (exp.detail_experience || []).map((detail) => ({
+            type: 'Sessions',
+            id: detail.sound_scape,
+            caption: detail.caption,
+            session: exp.menu_name,
+            duration: Math.ceil(Number(detail.duration) * 60000),
+            filepath: detail.song ? `${detail.song}` : null,
+            strobepath: detail.lamp ? `${detail.lamp}` : null,
+            display: exp.menu_name,
+            details: {
+              title: exp.menu_name,
+              description: exp.information ?? exp.menu_name,
+            },
+            scent: detail.scent ? detail.scent.toString() : null,
+            burstTime: (detail.burst_time || []).reduce((acc, bt) => {
+              acc[bt.start_time] = parseInt(bt.duration, 10);
+              return acc;
+            }, {})
+          }))
+        );
+
+        // Transform Domain 2: Guides
+        const transformedData = (soundTasks || []).flatMap((task) => {
+          const taskName = task.sound_task_code;
+          return [
+            {
+              type: 'Guides',
+              id: `${taskName}mini`,
+              session: 'Any',
+              duration: task.duration_little || 0,
+              filepath: task.sound_little ? `${task.sound_little}` : null,
+              display: `${taskName}lite`,
+            },
+            {
+              type: 'Guides',
+              id: `${taskName}less`,
+              session: 'Any',
+              duration: task.duration_less || 0,
+              filepath: task.sound_less ? `${task.sound_less}` : null,
+              display: `${taskName}less`,
+            },
+            {
+              type: 'Guides',
+              id: `${taskName}full`,
+              session: 'Any',
+              duration: task.duration_advance || 0,
+              filepath: task.sound_advance ? `${task.sound_advance}` : null,
+              display: `${taskName}advance`,
+            },
+          ].filter((item) => item.filepath !== null);
+        });
+
+        // Transform Domain 3: SelfDevelopment
+        const formattedSounds = (sounds || []).map((sound) => {
+          const durationMs = parseInt(sound.duration || '0', 10) * 1000;
+          return {
+            type: 'SelfDevelopment',
+            id: sound.sound_code,
+            description: sound.description,
+            session: sound.self_development?.self_development_name || 'Unknown',
+            duration: durationMs,
+            display: sound.self_development?.self_development_name || 'Unknown',
+            filepath: sound.filepath || 'Unknown',
+            details: {
+              title: sound.title || 'No Title',
+              description: sound.description || 'No Description',
+              soundPath: sound.filepath || 'Unknown',
+            },
+            video: sound.video,
+            strobepath: sound.lamp ? `${sound.lamp}` : null,
+          };
+        });
+
+        clearTimeout(timeout);
+        try { conn.end(); } catch (_) { }
+
+        if (!isHandled) {
+          isHandled = true;
+
+          if (category === 'experiences' || category === 'sessions') {
+            return resolve({
+              success: true,
+              source: 'database',
+              database: 'regenesis',
+              serverName: sshConfig.name,
+              targetHost: `${sshConfig.username}@${sshConfig.host}:${sshConfig.port}`,
+              category: 'experiences',
+              totalItems: formattedResult.length,
+              data: formattedResult,
+              rawTables: (includeRaw === true || includeRaw === 'true') ? {
+                experiences
+              } : undefined
+            });
+          }
+
+          if (category === 'self-development' || category === 'self_development') {
+            return resolve({
+              success: true,
+              source: 'database',
+              database: 'regenesis',
+              serverName: sshConfig.name,
+              targetHost: `${sshConfig.username}@${sshConfig.host}:${sshConfig.port}`,
+              category: 'self-development',
+              totalItems: formattedSounds.length,
+              data: formattedSounds,
+              rawTables: (includeRaw === true || includeRaw === 'true') ? {
+                selfDevelopment: sounds
+              } : undefined
+            });
+          }
+
+          if (category === 'guides' || category === 'sound_task') {
+            return resolve({
+              success: true,
+              source: 'database',
+              database: 'regenesis',
+              serverName: sshConfig.name,
+              targetHost: `${sshConfig.username}@${sshConfig.host}:${sshConfig.port}`,
+              category: 'guides',
+              totalItems: transformedData.length,
+              data: transformedData,
+              rawTables: (includeRaw === true || includeRaw === 'true') ? {
+                soundTasks
+              } : undefined
+            });
+          }
+
+          const finalMergedData = formattedResult.concat(transformedData).concat(formattedSounds);
+
+          resolve({
+            success: true,
+            source: 'database',
+            database: 'regenesis',
+            serverName: sshConfig.name,
+            targetHost: `${sshConfig.username}@${sshConfig.host}:${sshConfig.port}`,
+            category: 'all',
+            totalItems: finalMergedData.length,
+            stats: {
+              sessionsCount: formattedResult.length,
+              guidesCount: transformedData.length,
+              selfDevelopmentCount: formattedSounds.length
+            },
+            metadata: finalMergedData,
+            rawTables: (includeRaw === true || includeRaw === 'true') ? {
+              experiences,
+              soundTasks,
+              selfDevelopment: sounds
+            } : undefined
+          });
+        }
+      } catch (err) {
+        clearTimeout(timeout);
+        try { conn.end(); } catch (_) { }
+        if (!isHandled) {
+          isHandled = true;
+          reject(err);
+        }
+      }
+    });
+
+    conn.on('error', (connErr) => {
+      clearTimeout(timeout);
+      if (!isHandled) {
+        isHandled = true;
+        try { conn.end(); } catch (_) { }
+        reject(new Error(`Koneksi SSH error (${sshConfig.host}): ${connErr.message}`));
+      }
+    });
+
+    try {
+      conn.connect(sshConfig);
+    } catch (e) {
+      clearTimeout(timeout);
+      if (!isHandled) {
+        isHandled = true;
+        reject(e);
+      }
+    }
+  });
+}
+
 module.exports = {
   readRemoteMetadata,
   writeRemoteMetadata,
@@ -777,6 +1146,8 @@ module.exports = {
   generateMetadataFromDatabase,
   executeDatabaseMutation,
   mutateDatabaseAndRegenerate,
+  testDatabaseConnection,
+  getDatabaseMetadata,
   REMOTE_METADATA_FILE,
   REMOTE_METADATA_BACKUP
 };

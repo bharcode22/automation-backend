@@ -1,0 +1,28 @@
+info:
+  name: Insert New Guide (Sound Task)
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{local_url}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "INSERT INTO sound_task (sound_task_code, sound_little, sound_less, sound_advance, duration_little, duration_less, duration_advance) VALUES ('deep_breathe', 'db_mini.mp3', 'db_less.mp3', 'db_full.mp3', 300, 600, 900) ON CONFLICT (sound_task_code) DO UPDATE SET sound_little = EXCLUDED.sound_little, sound_less = EXCLUDED.sound_less, sound_advance = EXCLUDED.sound_advance, duration_little = EXCLUDED.duration_little, duration_less = EXCLUDED.duration_less, duration_advance = EXCLUDED.duration_advance;",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

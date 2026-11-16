@@ -1,0 +1,28 @@
+info:
+  name: Broadcast Mutate & Generate
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{local_url}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "broadcast": true,
+        "sql": "UPDATE experiences SET information = 'Pembaruan deskripsi serentak' WHERE menu_name = 'Ocean Waves';",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

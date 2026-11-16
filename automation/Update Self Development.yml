@@ -1,0 +1,28 @@
+info:
+  name: Update Self Development
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{local_url}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "UPDATE self_development_sound SET title = 'Binaural Beats Alpha Wave', filepath = 'alpha_waves.mp3', duration = 1200 WHERE sound_code = 1;",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

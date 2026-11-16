@@ -1,0 +1,30 @@
+info:
+  name: Test Database Connection
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{local_url}}/api/ssh/database/test"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30"
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: local
+      value: http://localhost:5051
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

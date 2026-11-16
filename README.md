@@ -152,6 +152,11 @@ npm start
 ### 4. Sinkronisasi & Mutasi Database PostgreSQL
 | Method | Endpoint | Deskripsi |
 | :--- | :--- | :--- |
+| `GET` | `/api/ssh/database/experiences?target=pod 30` | **Mengambil live data Experience (Sessions) langsung dari database (tabel `experiences`, `detail_experience`, `burst_time`)** |
+| `GET` | `/api/ssh/database/self-development?target=pod 30` | **Mengambil live data Self Development langsung dari database (tabel `self_development`, `self_development_sound`)** |
+| `GET` | `/api/ssh/database/guides?target=pod 30` | **Mengambil live data Guides langsung dari database (tabel `sound_task`)** |
+| `GET` | `/api/ssh/database/metadata?target=pod 30` | Mengambil seluruh live metadata gabungan langsung dari PostgreSQL (read-only, tanpa menimpa file) |
+| `GET / POST` | `/api/ssh/database/test` | Menguji koneksi PostgreSQL remote, mengambil info versi, skema tabel/kolom, dan contoh data |
 | `POST` | `/api/ssh/metadata/generate-from-db` | Query PostgreSQL `regenesis`, transform data, tulis ke `metadata.json`, dan kirim `NOTIFY` |
 | `POST` | `/api/ssh/metadata/sync-db` | Alias untuk `generate-from-db` |
 | `POST` | `/api/ssh/database/mutate-and-generate` | **Eksekusi mutasi SQL (INSERT/UPDATE/DELETE) dalam transaksi `BEGIN...COMMIT` lalu otomatis me-regenerate `metadata.json`** |

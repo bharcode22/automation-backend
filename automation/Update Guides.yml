@@ -1,0 +1,28 @@
+info:
+  name: Update Guides
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{local_url}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "UPDATE sound_task SET sound_little = 'db_mini_updated.mp3', sound_advance = 'db_full_updated.mp3', duration_little = 300, duration_advance = 900 WHERE sound_task_code = 'deep_breathe';",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

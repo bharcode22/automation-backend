@@ -1,0 +1,28 @@
+info:
+  name: Save Remote Metadata
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: http://localhost:5051/api/ssh/metadata
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "broadcast": false,
+        "createBackup": true,
+        "content": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,28 @@
+info:
+  name: Update Experience
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{local_url}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "UPDATE experiences SET information = 'Terapi gelombang suara laut tenang' WHERE menu_name = 'Ocean Waves'; UPDATE detail_experience SET song = 'ocean_calm.mp3', duration = 25 WHERE sound_scape = 1;",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

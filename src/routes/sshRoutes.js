@@ -29,7 +29,12 @@ const {
   handleRestoreMetadata,
   handleSyncDb,
   handleGenerateMetadataFromDb,
-  handleMutateAndGenerateMetadata
+  handleMutateAndGenerateMetadata,
+  handleTestDatabaseConnection,
+  handleGetDatabaseMetadata,
+  handleGetExperiences,
+  handleGetSelfDevelopment,
+  handleGetGuides
 } = require('../controllers/metadataController');
 
 const {
@@ -58,6 +63,15 @@ router.post('/metadata/sync-db', handleSyncDb);
 router.post('/metadata/generate-from-db', handleGenerateMetadataFromDb);
 router.post('/metadata/mutate-and-generate', handleMutateAndGenerateMetadata);
 router.post('/database/mutate-and-generate', handleMutateAndGenerateMetadata);
+router.get('/database/test', handleTestDatabaseConnection);
+router.post('/database/test', handleTestDatabaseConnection);
+router.get('/database/metadata', handleGetDatabaseMetadata);
+router.get('/database/data', handleGetDatabaseMetadata);
+router.get('/database/experiences', handleGetExperiences);
+router.get('/database/experience', handleGetExperiences);
+router.get('/database/self-development', handleGetSelfDevelopment);
+router.get('/database/self_development', handleGetSelfDevelopment);
+router.get('/database/guides', handleGetGuides);
 
 // 5. Remote Shell Scripts Execution (/home/pod/scripts/exec)
 router.post('/scripts/run', handleRunScript);

@@ -1,0 +1,8 @@
+name: automation-environment
+variables:
+  - name: local_url
+    value: http://localhost:5051
+    description: ""
+  - name: "40"
+    value: http://192.168.199.40:5051
+    description: ""

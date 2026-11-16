@@ -5,7 +5,9 @@ const {
   triggerRemoteDatabaseSync,
   generateMetadataFromDatabase,
   executeDatabaseMutation,
-  mutateDatabaseAndRegenerate
+  mutateDatabaseAndRegenerate,
+  testDatabaseConnection,
+  getDatabaseMetadata
 } = require('../services/metadataService');
 const { loadSshCredentials, loadSshCredentialsList } = require('../config/sshConfig');
 
@@ -297,12 +299,128 @@ async function handleMutateAndGenerateMetadata(req, res) {
   }
 }
 
+/**
+ * GET or POST /api/ssh/database/test
+ * Test remote PostgreSQL database connection and retrieve schema/table info
+ */
+async function handleTestDatabaseConnection(req, res) {
+  try {
+    const targetIdentifier = req.query?.target || req.query?.targetServerId || req.body?.targetServerId || req.body?.target;
+    const server = loadSshCredentials(targetIdentifier);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Target server SSH tidak ditemukan.' });
+    }
+
+    const result = await testDatabaseConnection(server);
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/ssh/database/metadata?target=...&category=...&includeRaw=true
+ * Fetch live metadata structure & raw relational table records directly from PostgreSQL
+ */
+async function handleGetDatabaseMetadata(req, res) {
+  try {
+    const { target, targetServerId, category = 'all', includeRaw = true } = req.query || {};
+    const targetIdentifier = target || targetServerId;
+    const server = loadSshCredentials(targetIdentifier);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Target server SSH tidak ditemukan.' });
+    }
+
+    const result = await getDatabaseMetadata(server, { category, includeRaw });
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/ssh/database/experiences?target=...&includeRaw=true
+ * Fetch experiences (Sessions) directly from PostgreSQL
+ */
+async function handleGetExperiences(req, res) {
+  try {
+    const { target, targetServerId, includeRaw = true } = req.query || {};
+    const server = loadSshCredentials(target || targetServerId);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Target server SSH tidak ditemukan.' });
+    }
+
+    const result = await getDatabaseMetadata(server, { category: 'experiences', includeRaw });
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/ssh/database/self-development?target=...&includeRaw=true
+ * Fetch self development data directly from PostgreSQL
+ */
+async function handleGetSelfDevelopment(req, res) {
+  try {
+    const { target, targetServerId, includeRaw = true } = req.query || {};
+    const server = loadSshCredentials(target || targetServerId);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Target server SSH tidak ditemukan.' });
+    }
+
+    const result = await getDatabaseMetadata(server, { category: 'self-development', includeRaw });
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * GET /api/ssh/database/guides?target=...&includeRaw=true
+ * Fetch guides (Sound Tasks) directly from PostgreSQL
+ */
+async function handleGetGuides(req, res) {
+  try {
+    const { target, targetServerId, includeRaw = true } = req.query || {};
+    const server = loadSshCredentials(target || targetServerId);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Target server SSH tidak ditemukan.' });
+    }
+
+    const result = await getDatabaseMetadata(server, { category: 'guides', includeRaw });
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
 module.exports = {
   handleGetMetadata,
   handleSaveMetadata,
   handleRestoreMetadata,
   handleSyncDb,
   handleGenerateMetadataFromDb,
-  handleMutateAndGenerateMetadata
+  handleMutateAndGenerateMetadata,
+  handleTestDatabaseConnection,
+  handleGetDatabaseMetadata,
+  handleGetExperiences,
+  handleGetSelfDevelopment,
+  handleGetGuides
 };
 
