@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{local_url}}/api/ssh/database/metadata?target=pod 30&category=all&includeRaw=true"
+  url: "{{40}}/api/ssh/database/metadata?target=pod 30&category=all&includeRaw=true"
   params:
     - name: target
       value: pod 30

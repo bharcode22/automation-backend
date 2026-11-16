@@ -5,10 +5,10 @@ info:
 
 http:
   method: GET
-  url: "{{local_url}}/api/ssh/metadata?target=pod 30"
+  url: "{{40}}/api/ssh/metadata?target=pod 37"
   params:
     - name: target
-      value: pod 30
+      value: pod 37
       type: query
   auth: inherit
 
