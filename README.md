@@ -210,3 +210,9 @@ curl -X POST "http://localhost:5051/api/ssh/database/mutate-and-generate" \
 | :--- | :--- | :--- |
 | `POST` | `/api/ssh/scripts/run` | Menjalankan script whitelist (`kill-process.sh` atau `auto-script.sh`) di `/home/pod/scripts/exec/` |
 | `GET` | `/api/ssh/scripts/list?target=pod 30` | Melihat daftar script yang tersedia di direktori remote |
+
+### 6. Riwayat Log Aktivitas REST API
+| Method | Endpoint | Deskripsi |
+| :--- | :--- | :--- |
+| `GET` | `/api/ssh/logs?limit=50` | Melihat riwayat log request REST API (Method, URL, Target, Status Code, Durasi ms) |
+| `DELETE` | `/api/ssh/logs` | Mengosongkan buffer log aktivitas REST API |

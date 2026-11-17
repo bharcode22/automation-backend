@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://localhost:5051/api/ssh/metadata
+  url: "{{40}}/api/ssh/metadata"
   headers:
     - name: Content-Type
       value: application/json

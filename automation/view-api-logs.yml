@@ -1,0 +1,20 @@
+info:
+  name: View REST API Logs
+  type: http
+  seq: 13
+
+http:
+  method: GET
+  url: "{{local_url}}/api/ssh/logs?limit=50"
+  params:
+    - name: limit
+      value: "50"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

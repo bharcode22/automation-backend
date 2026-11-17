@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -14,6 +16,18 @@ const server = http.createServer(app);
 const PORT = parseInt(process.env.PORT, 10) || 5050;
 const HOST = process.env.HOST || '0.0.0.0';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+
+// In-memory buffer for REST API activity logs (last 200 requests)
+const requestLogs = [];
+const MAX_LOGS = 200;
+const logFilePath = path.join(__dirname, '../server.log');
+
+function addLog(logEntry) {
+  requestLogs.unshift(logEntry);
+  if (requestLogs.length > MAX_LOGS) {
+    requestLogs.pop();
+  }
+}
 
 // Parse CORS origin config (support wildcard or comma-separated list)
 const allowedOrigins = CORS_ORIGIN === '*' ? '*' : CORS_ORIGIN.split(',').map((s) => s.trim());
@@ -34,6 +48,72 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Helper to format & sanitize body for logging
+function sanitizeAndFormatBody(body) {
+  if (!body || typeof body !== 'object') return null;
+  const clone = Array.isArray(body) ? [...body] : { ...body };
+  if (clone.password) clone.password = '******';
+  if (clone.passphrase) clone.passphrase = '******';
+  if (Array.isArray(clone.content) && clone.content.length > 5) {
+    clone.content = `[Array of ${clone.content.length} items...]`;
+  }
+  return clone;
+}
+
+// HTTP Request Logging Middleware (Console + File + In-Memory Buffer)
+app.use((req, res, next) => {
+  const start = Date.now();
+  const timestamp = new Date().toISOString();
+  const isMutationMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  const hasBody = req.body && Object.keys(req.body).length > 0;
+  const sanitizedBody = hasBody ? sanitizeAndFormatBody(req.body) : null;
+
+  // 1. Log immediately when the URL is hit
+  let incomingLog = `\n📥 [${timestamp}] ${req.method} ${req.originalUrl || req.url}`;
+  if (isMutationMethod && sanitizedBody) {
+    let bodyPreview = JSON.stringify(sanitizedBody, null, 2);
+    if (bodyPreview.length > 2000) {
+      bodyPreview = bodyPreview.slice(0, 2000) + '\n   ... [truncated]';
+    }
+    incomingLog += `\n   📦 Body:\n${bodyPreview.split('\n').map((l) => '      ' + l).join('\n')}`;
+  }
+  console.log(incomingLog);
+
+  try {
+    fs.appendFileSync(logFilePath, `${incomingLog}\n`);
+  } catch (_) { }
+
+  // 2. Log when response finishes
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const statusCode = res.statusCode;
+    const statusIcon = statusCode < 400 ? '✅' : '❌';
+    const finishLine = `   ${statusIcon} Finished: ${statusCode} (${duration}ms)\n`;
+    console.log(finishLine);
+
+    const targetParam = req.query?.target || req.query?.targetServerId || req.body?.targetServerId || req.body?.target || '-';
+    const logEntry = {
+      timestamp,
+      method: req.method,
+      url: req.originalUrl || req.url,
+      path: req.path,
+      target: targetParam,
+      statusCode,
+      durationMs: duration,
+      body: sanitizedBody || undefined,
+      ip: req.ip || req.connection?.remoteAddress
+    };
+
+    addLog(logEntry);
+
+    try {
+      fs.appendFileSync(logFilePath, `${finishLine}\n`);
+    } catch (_) { }
+  });
+
+  next();
+});
 
 // Root info endpoint
 app.get('/', (req, res) => {
@@ -83,6 +163,22 @@ app.get('/health', (req, res) => {
     targetDefault: `${currentCreds.username || 'pod'}@${currentCreds.host || '127.0.0.1'}:${currentCreds.port || 22}`,
     authType: currentCreds.authType || 'password'
   });
+});
+
+// REST API Request Activity Logs
+app.get('/api/ssh/logs', (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 50;
+  res.json({
+    success: true,
+    count: Math.min(limit, requestLogs.length),
+    totalLogs: requestLogs.length,
+    logs: requestLogs.slice(0, limit)
+  });
+});
+
+app.delete('/api/ssh/logs', (req, res) => {
+  requestLogs.length = 0;
+  res.json({ success: true, message: 'Log aktivitas REST API berhasil dibersihkan.' });
 });
 
 // Mount SSH API routes
