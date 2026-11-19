@@ -1,0 +1,28 @@
+info:
+  name: Insert New Experience
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: "{{40}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "WITH new_exp AS (INSERT INTO experiences (menu_name, information) VALUES ('Forest Healing', 'Terapi relaksasi suasana alam hutan pinus') RETURNING id), new_detail AS (INSERT INTO detail_experience (experience_id, sound_scape, caption, duration, song, lamp, scent) SELECT id, 101, 'Kicau burung dan gemercik air', 25, 'forest_birds.mp3', 'strobe_green.txt', '2' FROM new_exp RETURNING id) INSERT INTO burst_time (fk_detail_experience, start_time, duration) SELECT id, 10, 5 FROM new_detail;",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

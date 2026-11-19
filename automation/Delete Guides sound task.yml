@@ -1,0 +1,28 @@
+info:
+  name: Delete Guides sound task
+  type: http
+  seq: 18
+
+http:
+  method: POST
+  url: "{{40}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "UPDATE sound_task SET deleted_at = NOW() WHERE sound_task_code = 'mindful_breath';",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

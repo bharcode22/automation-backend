@@ -14,7 +14,7 @@ http:
     data: |-
       {
         "targetServerId": "pod 30",
-        "sql": "UPDATE self_development_sound SET title = 'Binaural Beats Alpha Wave', filepath = 'alpha_waves.mp3', duration = 1200 WHERE sound_code = 1;",
+        "sql": "UPDATE self_development_sound SET title = 'Alpha Wave Focus 10Hz', description = 'Musik binaural beats untuk stimulasi gelombang otak alpha', duration = 1200, filepath = 'alpha_focus_10hz.mp3', video = 'focus_ambient.mp4', lamp = 'strobe_calm.txt' WHERE sound_code = 1;",
         "createBackup": true,
         "regenerate": true
       }

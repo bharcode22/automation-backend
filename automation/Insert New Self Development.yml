@@ -1,0 +1,28 @@
+info:
+  name: Insert New Self Development
+  type: http
+  seq: 15
+
+http:
+  method: POST
+  url: "{{40}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "WITH cat AS (SELECT id FROM self_development WHERE self_development_name = 'Focus' LIMIT 1) INSERT INTO self_development_sound (self_development_id, sound_code, title, description, duration, filepath, video, lamp) SELECT id, 202, 'Deep Concentration Flow', 'Meningkatkan fokus belajar dan bekerja', 1800, 'deep_concentration.mp3', 'rain_window.mp4', 'strobe_soft.txt' FROM cat;",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

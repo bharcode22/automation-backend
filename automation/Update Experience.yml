@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{40}}/api/ssh/database/mutate-and-generate"
+  url: "{{local_url}}/api/ssh/database/mutate-and-generate"
   headers:
     - name: Content-Type
       value: application/json
@@ -14,7 +14,7 @@ http:
     data: |-
       {
         "targetServerId": "pod 30",
-        "sql": "UPDATE experiences SET information = 'Terapi gelombang suara laut tenang' WHERE menu_name = 'Ocean Waves'; UPDATE detail_experience SET song = 'ocean_calm.mp3', duration = 25 WHERE sound_scape = 1;",
+        "sql": "UPDATE experiences SET information = 'Sesi relaksasi suara ombak laut malam' WHERE menu_name = 'Ocean Waves'; UPDATE detail_experience SET song = 'ocean_waves.mp3', lamp = 'strobe_blue.txt', scent = '1', duration = 30 WHERE sound_scape = 1; UPDATE burst_time SET start_time = 15, duration = 5 WHERE fk_detail_experience = 1;",
         "createBackup": true,
         "regenerate": true
       }

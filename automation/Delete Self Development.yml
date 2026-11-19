@@ -1,0 +1,28 @@
+info:
+  name: Delete Self Development
+  type: http
+  seq: 17
+
+http:
+  method: POST
+  url: "{{40}}/api/ssh/database/mutate-and-generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "targetServerId": "pod 30",
+        "sql": "UPDATE self_development_sound SET deleted_at = NOW() WHERE sound_code = 202;",
+        "createBackup": true,
+        "regenerate": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

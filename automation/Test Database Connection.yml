@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{40}}/api/ssh/database/test"
+  url: "{{local_url}}/api/ssh/database/test"
   headers:
     - name: Content-Type
       value: application/json
