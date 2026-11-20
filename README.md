@@ -138,7 +138,7 @@ npm start
 ### 2. Smart Media Uploader (SFTP)
 | Method | Endpoint | Deskripsi |
 | :--- | :--- | :--- |
-| `POST` | `/api/ssh/media/upload` | Unggah media (`files`), auto-route ke sounds/videos/images. Opsi `broadcast: true` |
+| `POST` | `/api/ssh/media/upload` | Unggah media (`files`), auto-route ke sounds/videos/images. **Unlimited file size (disk streaming)**, opsi `broadcast: true` |
 | `GET` | `/api/ssh/media/list?target=pod 30&category=all` | Melihat daftar berkas media remote pada kategori tertentu |
 | `GET` | `/api/ssh/media/detect?filename=sample.mp3` | Mendeteksi kategori dan path tujuan file berdasarkan nama |
 

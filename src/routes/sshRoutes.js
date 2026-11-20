@@ -1,12 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const os = require('os');
+const path = require('path');
 
-// Configure multer with memory storage (buffers kept in memory and streamed directly to SFTP)
+// Configure multer with disk storage (streams directly to temporary disk to support unlimited file size without RAM exhaustion)
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, os.tmpdir());
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `upload-${uniqueSuffix}-${path.basename(file.originalname)}`);
+  }
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage,
   limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB max per file
+    // No fileSize limit (unlimited file size)
+    files: 50 // Up to 50 files per batch
   }
 });
 

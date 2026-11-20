@@ -13,6 +13,11 @@ const { loadSshCredentials, loadSshCredentialsList } = require('./config/sshConf
 const app = express();
 const server = http.createServer(app);
 
+// Disable HTTP request timeout for large file uploads (streaming gigabyte videos)
+server.requestTimeout = 0;
+server.headersTimeout = 120000;
+server.keepAliveTimeout = 90000;
+
 const PORT = parseInt(process.env.PORT, 10) || 5050;
 const HOST = process.env.HOST || '0.0.0.0';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
@@ -194,6 +199,12 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
+  if (err && err.name === 'MulterError') {
+    return res.status(400).json({
+      success: false,
+      error: `Gagal mengunggah berkas (${err.code}): ${err.message}`
+    });
+  }
   console.error('❌ Server Error:', err);
   res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
 });

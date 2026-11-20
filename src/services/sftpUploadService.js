@@ -1,6 +1,7 @@
 const { Client } = require('ssh2');
 const path = require('path');
 const stream = require('stream');
+const fs = require('fs');
 const { resolveSshConfig } = require('../config/sshConfig');
 
 // Extension mappings for auto-routing
@@ -68,9 +69,9 @@ function ensureRemoteDirectory(conn, dirPath) {
 }
 
 /**
- * Upload a single file buffer to remote server via an existing or new SFTP session
+ * Upload a single file (from disk path or memory buffer) to remote server via an existing or new SFTP session
  */
-function uploadStreamToFile(sftp, remoteFilePath, fileBuffer, timeoutMs = 120000) {
+function uploadStreamToFile(sftp, remoteFilePath, fileSource, timeoutMs = 120000) {
   return new Promise((resolve, reject) => {
     let finished = false;
     const timer = setTimeout(() => {
@@ -98,9 +99,31 @@ function uploadStreamToFile(sftp, remoteFilePath, fileBuffer, timeoutMs = 120000
       }
     });
 
-    const bufferStream = new stream.PassThrough();
-    bufferStream.end(fileBuffer);
-    bufferStream.pipe(writeStream);
+    let readStream;
+    if (typeof fileSource === 'string') {
+      // It's a file path on disk (from multer diskStorage)
+      readStream = fs.createReadStream(fileSource);
+    } else if (Buffer.isBuffer(fileSource)) {
+      // It's a Buffer in memory
+      readStream = new stream.PassThrough();
+      readStream.end(fileSource);
+    } else if (fileSource && typeof fileSource.pipe === 'function') {
+      // It's already a stream
+      readStream = fileSource;
+    } else {
+      clearTimeout(timer);
+      return reject(new Error('Sumber file tidak valid (harus file path atau buffer).'));
+    }
+
+    readStream.on('error', (err) => {
+      if (!finished) {
+        finished = true;
+        clearTimeout(timer);
+        reject(err);
+      }
+    });
+
+    readStream.pipe(writeStream);
   });
 }
 
@@ -163,7 +186,7 @@ function uploadFilesToRemoteServer(serverConfig, files) {
             const transferTimeout = Math.max(60000, Math.ceil(file.size / 204800) * 1000);
 
             try {
-              await uploadStreamToFile(sftp, remoteFilePath, file.buffer, transferTimeout);
+              await uploadStreamToFile(sftp, remoteFilePath, file.path || file.buffer, transferTimeout);
               results.push({
                 success: true,
                 filename: safeName,

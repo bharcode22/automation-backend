@@ -1,3 +1,4 @@
+const fs = require('fs');
 const { uploadFilesToRemoteServer, listMediaCategory, categorizeFile } = require('../services/sftpUploadService');
 const { loadSshCredentials, loadSshCredentialsList } = require('../config/sshConfig');
 
@@ -76,6 +77,16 @@ async function handleUploadFiles(req, res) {
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
+  } finally {
+    // Safely remove temporary files from disk
+    const filesToClean = req.files || (req.file ? [req.file] : []);
+    if (Array.isArray(filesToClean)) {
+      for (const file of filesToClean) {
+        if (file && file.path) {
+          fs.unlink(file.path, () => {});
+        }
+      }
+    }
   }
 }
 
